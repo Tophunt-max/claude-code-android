@@ -12,6 +12,14 @@ Termux → proot-Ubuntu → Claude Code, with free model access through a local 
 ![Arch](https://img.shields.io/badge/arch-aarch64-lightgrey)
 ![Disk](https://img.shields.io/badge/disk-~5GB-orange)
 
+<br>
+
+<img src="screenshot.png" alt="Claude Code running in a Termux session on an Android phone, showing the welcome panel with the claude-opus-free model and a reply to 'hi what you can do for me?'" width="330">
+
+<sub>Not a mockup — Claude Code in Termux on a real unrooted phone, answering through a free `claude-opus-free` combo.</sub>
+
+<br>
+
 Companion repo for the [DevZoneX](https://www.youtube.com/@DevZoneX) video. The chapters here match the chapters on screen.
 
 </div>

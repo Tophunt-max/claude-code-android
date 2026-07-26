@@ -2,3 +2,6 @@
 # a confusing "bad interpreter: no such file or directory" error, because the
 # shebang line ends up as "...bash\r".
 *.sh text eol=lf
+
+# Never run line-ending conversion over images.
+*.png binary
