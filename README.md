@@ -31,6 +31,7 @@ Companion repo for the [DevZoneX](https://www.youtube.com/@DevZoneX) video. The 
 | [Quick start](#quick-start-scripted) | `setup.sh` — Chapters 1–3, unattended |
 | [Full walkthrough](#full-walkthrough) | Chapters 1–6, every command explained |
 | [Daily use](#daily-use) | The two-session routine |
+| [Useful commands](#useful-commands) | Cheat sheet, split by which shell it runs in |
 | [Why proot-Ubuntu](#why-proot-ubuntu-and-not-the-native-install) | And why the easier-looking path breaks |
 | [Honest limits](#honest-limits) | What this setup is bad at |
 
@@ -258,6 +259,90 @@ Two Termux sessions, swipe from the left edge to switch:
 | 2 | `proot-distro login ubuntu` → `claude` | do your work here |
 
 See [`troubleshooting.md`](troubleshooting.md) for keyboard setup, session persistence, and battery survival.
+
+---
+
+## Useful commands
+
+Everything you'll actually reach for, grouped by the shell it belongs in. Running one of these in the wrong shell is the most common reason something "doesn't work."
+
+### In Termux — prompt `~ $`
+
+| Command | What it does |
+|---|---|
+| `pkg update && pkg upgrade -y` | Refresh package lists and upgrade everything installed |
+| `pkg install <name> -y` | Install a Termux package |
+| `uname -m` | Print CPU architecture — must say `aarch64` |
+| `df -h $HOME` | Check free storage before installing Ubuntu |
+| `termux-setup-storage` | Grant Termux access to phone storage, creates `~/storage` |
+| `cd ~/storage/shared` | Jump to your phone's internal storage (Downloads, Documents…) |
+| `termux-reload-settings` | Apply changes to `~/.termux/termux.properties`, e.g. the extra-keys row |
+| `command -v claude` | Check whether a leftover Path A `claude` is still on the Termux side |
+| `9router` | Start the proxy — leave this session running |
+| `pkill -f 9router` | Kill a stuck proxy when the port is already in use |
+| `proot-distro list` | List available and installed distros |
+| `proot-distro login ubuntu` | Enter Ubuntu — this is where Claude Code lives |
+
+### In Ubuntu — prompt `root@localhost:~#`
+
+| Command | What it does |
+|---|---|
+| `apt update && apt upgrade -y` | Ubuntu's own package refresh — separate from `pkg` in Termux |
+| `apt install -y <name>` | Install an Ubuntu package |
+| `claude --version` | Confirm Claude Code is installed and on PATH |
+| `claude` | Start Claude Code |
+| `mkdir -p ~/.claude` | Create the config directory — in **Ubuntu's** home, not Termux's |
+| `nano ~/.claude/settings.json` | Edit the config that points Claude Code at 9Router |
+| `cat ~/.claude/settings.json` | Read the config back to confirm you edited the right one |
+| `ls -la ~/.local/bin/claude` | Check the binary actually exists when `claude` isn't found |
+| `source ~/.bashrc` | Reload PATH after adding `~/.local/bin` to it |
+| `curl -s http://127.0.0.1:20128/ -o /dev/null -w '%{http_code}\n'` | Test that Ubuntu can reach 9Router in Termux — any HTTP code means yes |
+| `cd /data/data/com.termux/files/home` | Reach Termux's home from inside Ubuntu, for files you also open in an Android app |
+| `exit` | Back out to Termux |
+
+### Deploying from the phone — in Ubuntu
+
+| Command | What it does |
+|---|---|
+| `git config --global user.name "<name>"` | Set the name on your commits, once per install |
+| `git config --global user.email "<email>"` | Same for email |
+| `git clone https://github.com/<user>/<repo>.git` | Pull a repo down onto the phone |
+| `git add -A` | Stage everything you and Claude Code changed |
+| `git commit -m "<message>"` | Commit the staged changes |
+| `git push` | Push to GitHub — use a **personal access token** as the password, not your account password |
+
+### Inside a Claude Code session
+
+| | |
+|---|---|
+| `/help` | List every available command — start here |
+| `/clear` | Wipe the conversation and start fresh |
+| `/compact` | Summarise a long conversation to free up context |
+| `/model` | Switch which model tier gets used |
+| `/status` | Show the current config, including which base URL it's talking to |
+| `Esc` | Interrupt Claude mid-response |
+| `/exit` | Quit back to the shell |
+
+### nano, for anyone who hasn't used it
+
+| | |
+|---|---|
+| `Ctrl+O` then `Enter` | Save |
+| `Ctrl+X` | Exit |
+| `Ctrl+K` | Cut the current line — useful for clearing a bad config |
+
+> [!TIP]
+> Swipe from the **left edge** of Termux for the session drawer, then **New session**. That's how you run 9Router and Claude Code at the same time.
+
+### Starting over
+
+> [!WARNING]
+> `proot-distro remove ubuntu` **deletes the container and everything inside it** — Claude Code, your `settings.json`, and any project files you created in there. Only use it on an install that never worked.
+
+```bash
+proot-distro remove ubuntu     # destroys the container
+proot-distro install ubuntu    # fresh one, then re-run Chapter 3
+```
 
 ---
 
