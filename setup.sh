@@ -184,6 +184,9 @@ cat <<'EOF'
 ======================================================================
  Claude Code is installed. Two manual steps left — both need your own
  accounts, so they are not automated.
+
+ Same list, with checks and explanations:
+   README.md -> "After setup.sh finishes"
 ======================================================================
 
  FIRST, know which shell you are in. This trips up most people:

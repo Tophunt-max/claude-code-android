@@ -29,6 +29,7 @@ Companion repo for the [DevZoneX](https://www.youtube.com/@DevZoneX) video. The 
 | [How the pieces fit](#how-the-pieces-fit) | The one thing to understand before you start |
 | [What you need](#what-you-need) | Requirements, and the Termux build that actually works |
 | [Quick start](#quick-start-scripted) | `setup.sh` — Chapters 1–3, unattended |
+| [After `setup.sh` finishes](#after-setupsh-finishes) | The manual half, as a copy-paste list |
 | [Full walkthrough](#full-walkthrough) | Chapters 1–6, every command explained |
 | [Daily use](#daily-use) | The two-session routine |
 | [Useful commands](#useful-commands) | Cheat sheet, split by which shell it runs in |
@@ -94,6 +95,73 @@ It stops after Chapter 3 on purpose. Chapters 4–6 (9Router, providers, combos,
 
 > [!TIP]
 > Do it manually the first time anyway. When something breaks later — and on free tiers it will — you'll know which piece to look at.
+
+---
+
+## After `setup.sh` finishes
+
+The script leaves you with a working `claude` inside Ubuntu that isn't pointed at anything yet. Six steps left. They're the same as Chapters 4–6 below, collected here in order so you can work straight down the list.
+
+**1. Confirm the install, in Termux — prompt `~ $`**
+
+```bash
+proot-distro login ubuntu -- bash -lc 'claude --version'
+```
+
+Prints a version and drops you back in Termux. If it fails, stop here — [`troubleshooting.md`](troubleshooting.md#claude---version-fails-right-after-the-install).
+
+**2. Start 9Router, in Termux**
+
+```bash
+npm install -g 9router
+9router
+```
+
+**Leave this session running.** Close it and Claude Code loses its endpoint.
+
+**3. Set up the dashboard, in your phone's browser**
+
+Open `http://localhost:20128` — password `123456`.
+
+- Change that password first. It's a published default.
+- Add your free providers.
+- Create a combo, priority-ordered, named exactly `claude-opus-free`.
+
+Ordering logic is in [`free-api-options.md`](free-api-options.md). Ignore the dashboard's "CLI Tools → Claude Code" page entirely — see the note in [Chapter 5](#chapter-5--configure-providers-and-combos).
+
+**4. Open a second Termux session and enter Ubuntu**
+
+Swipe from the **left edge** → **New session**, then:
+
+```bash
+proot-distro login ubuntu
+```
+
+Prompt becomes `root@localhost:~#`. Everything below runs here.
+
+**5. Write the config, inside Ubuntu**
+
+```bash
+mkdir -p ~/.claude
+nano ~/.claude/settings.json
+```
+
+Paste the JSON from [Chapter 6](#chapter-6--point-claude-code-at-9router), then `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+> [!IMPORTANT]
+> This has to be **Ubuntu's** home, not Termux's. A `settings.json` in Termux's `~` is silently ignored.
+
+**6. Check it, then run it — inside Ubuntu**
+
+```bash
+cat ~/.claude/settings.json                                          # right file, valid JSON?
+curl -s http://127.0.0.1:20128/ -o /dev/null -w '%{http_code}\n'     # any HTTP code = proxy reachable
+claude
+```
+
+Watch the 9Router session while you send your first message. A line like `▶ POST claude-opus-free → provider/model` means the whole chain works. Nothing at all means the combo name doesn't match the dashboard.
+
+**Every session after this** — two Termux sessions, `9router` in one, `proot-distro login ubuntu` → `claude` in the other. Full list of commands worth knowing: [Useful commands](#useful-commands).
 
 ---
 
