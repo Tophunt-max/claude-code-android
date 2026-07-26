@@ -183,6 +183,11 @@ Add your free providers, then build a **combo**: a priority-ordered list of them
 
 See [`free-api-options.md`](free-api-options.md) for ordering logic and why a second combo is worth making.
 
+> [!NOTE]
+> **Ignore the dashboard's "CLI Tools → Claude Code" page.** It will say *"Claude CLI not detected locally"* — correctly, because 9Router runs in Termux and your `claude` is inside Ubuntu, where Termux can't see it. Your install is fine.
+>
+> Don't use that page's install button either: it points at `npm install -g @anthropic-ai/claude-code` in Termux, which rebuilds the native Path A install this guide exists to avoid. Use the dashboard for providers and combos only, and write `settings.json` by hand in Chapter 6.
+
 ## Chapter 6 — Point Claude Code at 9Router
 
 > Runs **inside Ubuntu** — in your other session

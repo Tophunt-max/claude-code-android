@@ -115,6 +115,23 @@ echo $PATH
 pkill -f 9router
 ```
 
+### Dashboard says "Claude CLI not detected locally"
+`Termux` — under CLI Tools → Claude Code. **Expected. Nothing is wrong.**
+
+9Router runs in Termux and auto-detects Claude Code by looking for a `claude` binary on the Termux PATH. Yours is inside the Ubuntu container at `/root/.local/bin/claude`, which Termux cannot see. The detection is accurate about its own shell and says nothing about whether your install works. Check the install itself from inside Ubuntu:
+
+```bash
+which claude          # /root/.local/bin/claude
+claude --version
+```
+
+If those work, you're done — use the dashboard only to manage providers and combos.
+
+> [!WARNING]
+> **Don't use that card's install or auto-config buttons.**
+> - The install instructions lead to `npm install -g @anthropic-ai/claude-code` in Termux, which rebuilds the native Path A install this repo exists to avoid — and leaves you with two different `claude` commands in two shells.
+> - Auto-config writes `~/.claude/settings.json` in **Termux's** home, which Claude Code never reads. Write it inside Ubuntu instead, as in [Chapter 6](README.md#chapter-6--point-claude-code-at-9router).
+
 ### Dashboard password rejected
 
 Default is `123456`. If you changed it and forgot, you'll need to reset 9Router's config.
