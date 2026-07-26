@@ -16,6 +16,7 @@
 # Safe to re-run. Already-completed steps are detected and skipped.
 #
 # Version: 1.0 (2026-07-26)
+# Tested: 2026-07-26, clean run on a freshly wiped Termux (aarch64, unrooted)
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/iAmAjayTeli/claude-code-android/main/setup.sh -o setup.sh
 #   cat setup.sh          # read it first
