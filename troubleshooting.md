@@ -173,6 +173,25 @@ If that fails while the same command works in Termux, log it — that's a real f
 
 Expected on free tiers. Add more providers to the combo and check the fallback order. See [`free-api-options.md`](free-api-options.md).
 
+### A provider errors in the 9Router console log
+
+First, read the status code — 403 and 429 mean opposite things and only one is worth retrying:
+
+| Code | Meaning | What to do |
+|---|---|---|
+| **429** | Free quota used up | Nothing. This is normal. Fallback moves to the next provider |
+| **403** | Not authorized at all | Retrying won't help. Check eligibility, region, and whether the account completed the provider's real signup |
+| **401** | Bad or expired credentials | Re-add the key or re-authenticate the account in the dashboard |
+| **5xx** | Provider is down | Move that provider lower in the combo |
+
+If the log shows a request arriving at all — a line like `▶ POST claude-opus-free → provider/model` — then Claude Code, `settings.json`, and the combo name are all correct. The failure is upstream at the provider, not in your setup.
+
+> [!IMPORTANT]
+> **Check that your combo contains more than one provider.** If every entry in the combo is from the same provider, one provider outage takes the whole combo down and the fallback has nowhere to go — you'll see it try each account, then each model, then give up. Combos only help when the entries are genuinely different providers. Keep a high-limit one at the bottom as a floor.
+
+> [!WARNING]
+> Adding several accounts on the *same* provider to multiply a free tier generally breaks that provider's terms of service, and providers tend to respond with blanket `403`s rather than rate limits. One account per provider and several different providers is both more reliable and reproducible for anyone following your setup.
+
 ---
 
 ## Mobile survival

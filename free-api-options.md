@@ -58,6 +58,14 @@ Order by, in priority:
 
 Candidates noted during setup, both unverified: **Kiro AI**, **OpenCode Free**.
 
+### Tested and currently failing
+
+| Provider | Date | Symptom | Assessment |
+|---|---|---|---|
+| **Antigravity** (`ag/`) | 2026-07-27 | `403` on every request to `cloudcode-pa.googleapis.com`, preceded by `onboardUser failed after 5 attempts: no project_id in response` | Google's onboarding call returns no project ID, so the request is unauthorized. Not a quota problem — a `403`, not a `429`, so retrying doesn't help. Either 9Router's implementation has gone stale against a Google-side change, the region isn't eligible, or the account never completed Antigravity's real signup. |
+
+Antigravity access is reverse-engineered from Google's own client, so it breaks whenever Google changes that flow. Treat it as a bonus, never as a combo's floor.
+
 ### Quality combo
 
 Fill in once tested:
