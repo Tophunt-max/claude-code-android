@@ -14,7 +14,7 @@ Termux → proot-Ubuntu → Claude Code, with free model access through a local 
 
 <br>
 
-<img src="screenshot.png" alt="Claude Code running in a Termux session on an Android phone, showing the welcome panel with the claude-opus-free model and a reply to 'hi what you can do for me?'" width="330">
+<a href="screenshot.png"><img src="screenshot.png" alt="Claude Code running in a Termux session on an Android phone, showing the welcome panel with the claude-opus-free model and a reply to 'hi what you can do for me?'" width="240"></a>
 
 <sub>Not a mockup — Claude Code in Termux on a real unrooted phone, answering through a free `claude-opus-free` combo.</sub>
 
