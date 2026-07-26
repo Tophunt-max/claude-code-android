@@ -180,7 +180,7 @@ First, read the status code — 403 and 429 mean opposite things and only one is
 | Code | Meaning | What to do |
 |---|---|---|
 | **429** | Free quota used up | Nothing. This is normal. Fallback moves to the next provider |
-| **403** | Not authorized at all | Retrying won't help. Check eligibility, region, and whether the account completed the provider's real signup |
+| **403** | Not authorized at all | Retrying won't help. Usually the specific account, not the provider — sign it into the provider's own app first, and swap it out if it still fails. Test a second account to tell an account problem from a provider-wide one |
 | **401** | Bad or expired credentials | Re-add the key or re-authenticate the account in the dashboard |
 | **5xx** | Provider is down | Move that provider lower in the combo |
 
