@@ -379,6 +379,10 @@ Everything you'll actually reach for, grouped by the shell it belongs in. Runnin
 | `source ~/.bashrc` | Reload PATH after adding `~/.local/bin` to it |
 | `curl -s http://127.0.0.1:20128/ -o /dev/null -w '%{http_code}\n'` | Test that Ubuntu can reach 9Router in Termux — any HTTP code means yes |
 | `cd /data/data/com.termux/files/home` | Reach Termux's home from inside Ubuntu, for files you also open in an Android app |
+| `cd /sdcard/Download` | Jump to your phone's internal Download folder — the short path to shared storage |
+| `cd /data/data/com.termux/files/home/storage/downloads` | Same folder via Termux's storage symlink — works once `termux-setup-storage` has been run |
+| `cd /data/data/com.termux/files/home/storage/external-1` | The SD card — Termux's writable app folder on it (Android 11+ blocks the rest of the card) |
+| `ls /storage` | List mounted volumes; an SD card shows up as `XXXX-XXXX` — its root is `/storage/XXXX-XXXX` |
 | `exit` | Back out to Termux |
 
 ### Deploying from the phone — in Ubuntu
