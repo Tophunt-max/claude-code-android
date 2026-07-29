@@ -99,6 +99,39 @@ bash setup.sh
 
 Tested on a clean run: freshly wiped Termux → working `claude` inside Ubuntu, no manual fixes needed. Safe to re-run too — completed steps are detected and skipped.
 
+<details>
+<summary><b>What the script actually does, step by step</b></summary>
+
+<br>
+
+No surprises — this is everything it touches, in order:
+
+**Before installing anything, it checks:**
+
+| Check | If it fails |
+|---|---|
+| Running inside Termux | Stops — this isn't a script for a PC |
+| CPU is `aarch64` | Stops — Claude Code has no 32-bit build, no workaround |
+| ~5GB free storage | Asks before continuing — Ubuntu unpacks before cleanup |
+| A leftover Path A `claude` in Termux | Warns only — it doesn't touch or delete it |
+
+**Step 1 — Termux packages.** `pkg update && pkg upgrade`, then installs `proot-distro` (runs the Ubuntu container) and `nodejs` (only needed later, for 9Router).
+
+**Step 2 — Ubuntu.** `proot-distro install ubuntu` — a ~2GB download from the official proot-distro mirrors. If the container already exists, this step is skipped, never reinstalled over.
+
+**Step 3 — Claude Code, inside Ubuntu.** Runs `apt update && apt upgrade` non-interactively (keeping existing configs, so it can't hang on a prompt), installs `curl git wget build-essential`, then downloads **Anthropic's official installer** from `claude.ai/install.sh` — to a file first, checked as non-empty, *then* run, so a failed download can't silently execute nothing. Adds `~/.local/bin` to PATH in Ubuntu's `.bashrc` and verifies with `claude --version`.
+
+**What it deliberately does NOT do:**
+
+- No 9Router install, no API keys, no `settings.json` — those need your accounts and a browser, so they stay manual and the script prints them as next steps
+- Never asks for root, never runs `su`
+- Deletes nothing — not even a leftover Path A install
+- Sends nothing anywhere — the only network traffic is the package downloads above
+
+The whole thing is ~230 lines of commented bash. `cat setup.sh` before running it — that's why the download step is separate.
+
+</details>
+
 It stops after Chapter 3 on purpose. Chapters 4–6 (9Router, providers, combos, `settings.json`) need your own API keys and a browser, so the script prints them as next steps instead of guessing.
 
 > [!TIP]
