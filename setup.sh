@@ -15,8 +15,9 @@
 #
 # Safe to re-run. Already-completed steps are detected and skipped.
 #
-# Version: 1.0 (2026-07-26)
+# Version: 1.1 (2026-07-27)
 # Tested: 2026-07-26, clean run on a freshly wiped Termux (aarch64, unrooted)
+# 1.1: auto-retry apt once after clearing the index (fixes 'Hash Sum mismatch')
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/iAmAjayTeli/claude-code-android/main/setup.sh -o setup.sh
 #   cat setup.sh          # read it first
@@ -25,7 +26,7 @@
 set -uo pipefail   # deliberately NOT -e: pkg upgrade can exit non-zero on
                    # harmless prompts. Every step below is checked explicitly.
 
-VERSION="1.0"
+VERSION="1.1"
 MIN_FREE_MB=5000
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
@@ -43,14 +44,27 @@ export DEBIAN_FRONTEND=noninteractive
 # Without it an unattended apt upgrade can hang forever on a dpkg prompt.
 APT_OPTS='-y -qq -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef'
 
+# Run an apt command; if it fails, assume a stale index or a caching proxy
+# served a mismatched file ("Hash Sum mismatch"), wipe the lists, re-update
+# with caching disabled, and try once more. This is the single most common
+# transient failure on mobile connections.
+apt_retry() {
+  # shellcheck disable=SC2086
+  apt-get $APT_OPTS "$@" && return 0
+  echo "--- apt failed; clearing the package index and retrying (likely a stale mirror or a caching proxy)"
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+  apt-get update -qq -o Acquire::http::No-Cache=true
+  # shellcheck disable=SC2086
+  apt-get $APT_OPTS -o Acquire::http::No-Cache=true "$@"
+}
+
 echo "--- apt update / upgrade"
 apt-get update -qq
-# shellcheck disable=SC2086
-apt-get upgrade $APT_OPTS
+apt_retry upgrade
 
 echo "--- installing curl git wget build-essential"
-# shellcheck disable=SC2086
-apt-get install $APT_OPTS curl git wget build-essential
+apt_retry install curl git wget build-essential
 
 if [ -x "$HOME/.local/bin/claude" ]; then
   echo "--- claude already present, skipping installer"
@@ -165,10 +179,18 @@ printf 'This runs apt and then Anthropic'\''s official installer. Output follows
 if proot-distro login ubuntu -- bash -c "$UBUNTU_SETUP"; then
   ok "Claude Code installed and responding inside Ubuntu"
 else
-  die "The Ubuntu step failed. Run it by hand to see where:
+  die "The Ubuntu step failed. The script already retried once after clearing
+the package index, so this is probably not a stale mirror.
+
+  If the error was 'Hash Sum mismatch', it is a transient mirror/proxy issue,
+  not your setup. Switch network (Wi-Fi <-> mobile data) and re-run this
+  script — completed steps are skipped.
+
+  Or finish it by hand inside Ubuntu:
 
   proot-distro login ubuntu
-  apt update && apt upgrade -y
+  apt clean && rm -rf /var/lib/apt/lists/*
+  apt-get update -o Acquire::http::No-Cache=true
   apt install -y curl git wget build-essential
   curl -fsSL https://claude.ai/install.sh | bash
   echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc

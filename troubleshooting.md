@@ -91,6 +91,22 @@ If the binary isn't there at all, re-run `curl -fsSL https://claude.ai/install.s
 
 That isn't a setup script — `nodesource.com` is just a website, so the command pipes a web page into bash and does nothing. Harmless but pointless. Claude Code's official installer ships a standalone binary and needs no Node inside Ubuntu.
 
+### `Hash Sum mismatch` during the Ubuntu step
+`Ubuntu`
+
+Nothing is wrong with your install. Ubuntu's mirror was mid-sync, or a caching proxy on your connection served a stale copy of a `.deb` that didn't match the index. The container itself installed fine — only the package fetch tripped.
+
+`setup.sh` v1.1+ clears the package index and retries once automatically. If you hit this running the script by hand, do the same thing from inside Ubuntu:
+
+```bash
+apt clean
+rm -rf /var/lib/apt/lists/*
+apt-get update -o Acquire::http::No-Cache=true
+apt install -y curl git wget build-essential
+```
+
+`No-Cache=true` tells any proxy in the path not to hand back the stale file. Still mismatching on the same package? Your connection has a transparent cache — switch networks (Wi-Fi ↔ mobile data) and retry. That sidesteps it every time.
+
 ---
 
 ## 9Router problems
