@@ -114,12 +114,13 @@ No surprises — this is everything it touches, in order:
 | CPU is `aarch64` | Stops — Claude Code has no 32-bit build, no workaround |
 | ~5GB free storage | Asks before continuing — Ubuntu unpacks before cleanup |
 | A leftover Path A `claude` in Termux | Warns only — it doesn't touch or delete it |
+| **Internet reachable** | Stops with a clear message — so it never downloads for minutes then fails on no connection |
 
-**Step 1 — Termux packages.** `pkg update && pkg upgrade`, then installs `proot-distro` (runs the Ubuntu container) and `nodejs` (only needed later, for 9Router).
+**Step 1 — Termux packages.** `pkg update && pkg upgrade`, then installs `proot-distro` (runs the Ubuntu container) and `nodejs` (only needed later, for 9Router). Fully non-interactive — keeps existing configs instead of pausing on a prompt. Each `pkg` operation retries up to 3× on a transient failure.
 
-**Step 2 — Ubuntu.** `proot-distro install ubuntu` — a ~2GB download from the official proot-distro mirrors. If the container already exists, this step is skipped, never reinstalled over.
+**Step 2 — Ubuntu.** `proot-distro install ubuntu` — a ~2GB download from the official proot-distro mirrors, retried up to 3×. If a previous run left a half-finished container (no `/bin/bash` inside), it's removed before starting fresh, so a dropped download can't leave a broken install that gets skipped as "already installed."
 
-**Step 3 — Claude Code, inside Ubuntu.** Runs `apt update && apt upgrade` non-interactively (keeping existing configs, so it can't hang on a prompt), installs `curl git wget build-essential`, then downloads **Anthropic's official installer** from `claude.ai/install.sh` — to a file first, checked as non-empty, *then* run, so a failed download can't silently execute nothing. Adds `~/.local/bin` to PATH in Ubuntu's `.bashrc` and verifies with `claude --version`.
+**Step 3 — Claude Code, inside Ubuntu.** Runs `apt update && apt upgrade` non-interactively (keeping existing configs, so it can't hang on a prompt), installs `curl git wget build-essential`, then downloads **Anthropic's official installer** from `claude.ai/install.sh` — to a file first, checked as non-empty, *then* run, with curl set to retry 5× on any transient error, so a failed download can't silently execute nothing. `apt` failures (e.g. `Hash Sum mismatch` from a stale mirror) are retried up to 3× after clearing the package index. Adds `~/.local/bin` to PATH in Ubuntu's `.bashrc` and verifies with `claude --version`.
 
 **What it deliberately does NOT do:**
 

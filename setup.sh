@@ -15,8 +15,10 @@
 #
 # Safe to re-run. Already-completed steps are detected and skipped.
 #
-# Version: 1.1 (2026-07-27)
+# Version: 1.2 (2026-07-27)
 # Tested: 2026-07-26, clean run on a freshly wiped Termux (aarch64, unrooted)
+# 1.2: retry pkg, curl, and the Ubuntu download; pre-flight connectivity check;
+#      fully non-interactive pkg/apt so nothing can hang on a prompt
 # 1.1: auto-retry apt once after clearing the index (fixes 'Hash Sum mismatch')
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/iAmAjayTeli/claude-code-android/main/setup.sh -o setup.sh
@@ -26,13 +28,32 @@
 set -uo pipefail   # deliberately NOT -e: pkg upgrade can exit non-zero on
                    # harmless prompts. Every step below is checked explicitly.
 
-VERSION="1.1"
+VERSION="1.2"
 MIN_FREE_MB=5000
+export MAX_TRIES=3    # how many times to attempt a network operation before giving up
+                     # exported so the apt_retry helper inside Ubuntu can see it
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 ok()   { printf '\033[1;32m  ✓ %s\033[0m\n' "$1"; }
 warn() { printf '\n\033[1;33m!! %s\033[0m\n' "$1"; }
 die()  { printf '\n\033[1;31mXX %s\033[0m\n\n' "$1" >&2; exit 1; }
+
+# Retry a command up to MAX_TRIES times, with a short pause between attempts.
+# Used for every network operation so a single dropped packet can't fail the
+# whole install. "$@" is the command; the label is printed on each retry.
+retry() {
+  local label="$1"; shift
+  local n=1
+  while ! "$@"; do
+    n=$((n + 1))
+    if [ "$n" -gt "$MAX_TRIES" ]; then
+      echo "  !! $label failed after $MAX_TRIES attempts"
+      return 1
+    fi
+    echo "  -- $label failed, retrying (attempt $n/$MAX_TRIES)..."
+    sleep 3
+  done
+}
 
 # --- what runs INSIDE ubuntu ---------------------------------------------------
 # Quoted heredoc: nothing expands here in Termux. $HOME resolves inside Ubuntu.
@@ -44,27 +65,36 @@ export DEBIAN_FRONTEND=noninteractive
 # Without it an unattended apt upgrade can hang forever on a dpkg prompt.
 APT_OPTS='-y -qq -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef'
 
-# Run an apt command; if it fails, assume a stale index or a caching proxy
+# Run an apt command; on failure, assume a stale index or a caching proxy
 # served a mismatched file ("Hash Sum mismatch"), wipe the lists, re-update
-# with caching disabled, and try once more. This is the single most common
-# transient failure on mobile connections.
+# with caching disabled, and retry up to MAX_TRIES times. This is the single
+# most common transient failure on mobile connections.
 apt_retry() {
+  local label="$1"; shift
+  local max="${MAX_TRIES:-3}"
+  local n=1
   # shellcheck disable=SC2086
-  apt-get $APT_OPTS "$@" && return 0
-  echo "--- apt failed; clearing the package index and retrying (likely a stale mirror or a caching proxy)"
-  apt-get clean
-  rm -rf /var/lib/apt/lists/*
-  apt-get update -qq -o Acquire::http::No-Cache=true
-  # shellcheck disable=SC2086
-  apt-get $APT_OPTS -o Acquire::http::No-Cache=true "$@"
+  while ! apt-get $APT_OPTS "$@"; do
+    n=$((n + 1))
+    if [ "$n" -gt "$max" ]; then
+      echo "  !! $label failed after $max attempts"
+      return 1
+    fi
+    echo "--- $label failed; clearing the package index and retrying (attempt $n/$max)"
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    apt-get update -qq -o Acquire::http::No-Cache=true
+    # shellcheck disable=SC2086
+    apt-get $APT_OPTS -o Acquire::http::No-Cache=true "$@"
+  done
 }
 
 echo "--- apt update / upgrade"
-apt-get update -qq
-apt_retry upgrade
+apt-get update -qq || apt-get update -qq -o Acquire::http::No-Cache=true
+apt_retry "apt upgrade" upgrade
 
 echo "--- installing curl git wget build-essential"
-apt_retry install curl git wget build-essential
+apt_retry "apt install" install curl git wget build-essential
 
 if [ -x "$HOME/.local/bin/claude" ]; then
   echo "--- claude already present, skipping installer"
@@ -73,7 +103,9 @@ else
   # Download to a file first rather than piping straight into bash: with a
   # bare pipe, a failed download feeds bash an empty script that exits 0,
   # so the failure is silent and only shows up later as "command not found".
-  curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+  # --retry/--retry-all-errors re-fetches on any transient failure.
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+       https://claude.ai/install.sh -o /tmp/claude-install.sh
   [ -s /tmp/claude-install.sh ] || { echo "!! installer download was empty"; exit 1; }
   bash /tmp/claude-install.sh
   rm -f /tmp/claude-install.sh
@@ -125,14 +157,32 @@ interfere with the Ubuntu one, but having two different 'claude' commands
 in two shells gets confusing. Consider removing it afterwards."
 fi
 
+# --- connectivity pre-flight --------------------------------------------------
+# The single most confusing on-camera failure is downloading for minutes
+# only to discover the network is down. Check first, and bail with a clear
+# message if there's no connection. --max-time keeps it from hanging.
+say "Checking network"
+if curl -fsS --max-time 10 -o /dev/null https://claude.ai/install.sh 2>/dev/null \
+  || curl -fsS --max-time 10 -o /dev/null https://github.com 2>/dev/null; then
+  ok "internet reachable"
+else
+  die "No internet connection, or claude.ai is unreachable.
+The install downloads packages and a ~2GB Ubuntu image, so it needs a
+stable connection. Check Wi-Fi/mobile data and re-run. Completed steps
+are skipped, so there's no cost to re-running."
+fi
+
 # --- step 1: termux packages ---------------------------------------------------
 
 say "Step 1/3 — Termux packages"
 printf 'If asked about package maintainer configs, press y.\n\n'
 
-pkg update -y
-pkg upgrade -y
-pkg install proot-distro nodejs -y
+# -o Dpkg::Options::=--force-confold makes pkg fully non-interactive: it
+# keeps existing config files instead of stopping on a conffile prompt that
+# would hang an unattended run.
+retry "pkg update"    pkg update -y -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef
+retry "pkg upgrade"   pkg upgrade -y -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef
+retry "pkg install"   pkg install proot-distro nodejs -y
 
 command -v proot-distro >/dev/null || die "proot-distro did not install.
 Try 'pkg install proot-distro -y' manually and read the output."
@@ -150,18 +200,30 @@ fi
 # Check the rootfs directory directly rather than parsing `proot-distro list`.
 # The --installed flag is not available on every proot-distro version, and if
 # the check silently fails we would try to reinstall over a working container.
+# Verify /bin/bash exists INSIDE the rootfs, not just the directory: a dropped
+# download can leave a half-written rootfs dir that's not a real install, and
+# skipping that as "installed" would produce a broken container silently.
 UBUNTU_ROOTFS="${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/installed-rootfs/ubuntu"
+ubuntu_installed() { [ -x "$UBUNTU_ROOTFS/bin/bash" ]; }
 
-if [ -d "$UBUNTU_ROOTFS" ]; then
+if ubuntu_installed; then
   say "Step 2/3 — Ubuntu already installed, skipping"
 else
+  # If a partial rootfs dir exists from a dropped previous run, remove it so
+  # the fresh install doesn't collide with stale, half-extracted files.
+  if [ -d "$UBUNTU_ROOTFS" ] && ! ubuntu_installed; then
+    warn "Found a partial Ubuntu install (no /bin/bash inside). Removing it and starting fresh."
+    proot-distro remove ubuntu >/dev/null 2>&1 || rm -rf "$UBUNTU_ROOTFS"
+  fi
   say "Step 2/3 — installing Ubuntu (~2GB, usually 2-5 minutes)"
-  if ! proot-distro install ubuntu; then
-    if [ -d "$UBUNTU_ROOTFS" ]; then
-      warn "Install reported an error but the container exists. Continuing."
+  # Retry the download: it's a large pull and mobile connections drop mid-way.
+  if ! retry "proot-distro install" proot-distro install ubuntu; then
+    if ubuntu_installed; then
+      warn "Install reported an error but the container is complete. Continuing."
     else
-      die "Ubuntu install failed and no container was created.
-Check your connection and free space, then re-run this script.
+      die "Ubuntu install failed after $MAX_TRIES attempts and no container was created.
+Usually a dropped connection mid-download. Re-run this script — the
+partial download is discarded and it starts fresh.
 
 Only if a later run keeps failing on a half-written container should you
 reset it — and be aware this DELETES everything inside Ubuntu:
