@@ -20,7 +20,9 @@ Termux → proot-Ubuntu → Claude Code, with free model access through a local 
 
 <br>
 
-Companion repo for the [DevZoneX](https://www.youtube.com/@DevZoneX) video. The chapters here match the chapters on screen.
+**▶️ Full step-by-step setup video:** [youtu.be/DUBBbO6FzOo](https://youtu.be/DUBBbO6FzOo)
+
+The chapters in this repo match the chapters on screen. New here? [Watch the video first](https://youtu.be/DUBBbO6FzOo), then use this page as the copy-paste reference.
 
 </div>
 
