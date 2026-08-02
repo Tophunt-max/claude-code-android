@@ -147,10 +147,10 @@ The script leaves you with a working `claude` inside Ubuntu that isn't pointed a
 **1. Confirm the install, in Termux — prompt `~ $`**
 
 ```bash
-proot-distro login ubuntu -- bash -lc 'claude --version'
+proot-distro login ubuntu -- /root/.local/bin/claude --version
 ```
 
-Prints a version and drops you back in Termux. If it fails, stop here — [`troubleshooting.md`](troubleshooting.md#claude---version-fails-right-after-the-install).
+Prints a version and drops you back in Termux. Call the binary by its full path here: a non-interactive login (`bash -lc 'claude ...'`) doesn't pick up the `PATH` line in `.bashrc`, so a bare `claude` would report "command not found" even though the install is fine. If the version check itself fails, stop here — [`troubleshooting.md`](troubleshooting.md#claude---version-fails-right-after-the-install).
 
 **2. Start 9Router, in Termux**
 
